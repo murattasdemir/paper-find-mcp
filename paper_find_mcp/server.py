@@ -33,6 +33,7 @@ from .academic_platforms.iacr import IACRSearcher
 from .academic_platforms.semantic import SemanticSearcher
 from .academic_platforms.crossref import CrossRefSearcher
 from .academic_platforms.repec import RePECSearcher
+from .academic_platforms.openalex import OpenAlexSearcher
 from .academic_platforms.sci_hub import SciHubFetcher, check_paper_year
 from .paper import Paper
 
@@ -82,6 +83,7 @@ SEARCHERS = {
     'semantic': SemanticSearcher(),
     'crossref': CrossRefSearcher(),
     'repec': RePECSearcher(),
+    'openalex': OpenAlexSearcher(),
 }
 
 # Sci-Hub 实例（单独管理，仅用于下载）
@@ -885,6 +887,45 @@ async def get_repec_paper(url_or_handle: str) -> Dict:
         return paper.to_dict()
     else:
         return {"error": f"Failed to fetch paper details from: {url_or_handle}"}
+
+# ============================================================
+# OpenAlex 工具
+# ============================================================
+@mcp.tool()
+async def search_openalex(
+    query: str, year: Optional[str] = None, max_results: int = 10
+) -> List[Dict]:
+    """Search OpenAlex - open catalog of 250M+ scholarly works across all fields.
+
+    USE THIS TOOL WHEN:
+    - Searching for ECONOMICS research (macro, micro, finance, econometrics)
+    - You need WORKING PAPERS: NBER, IZA, Federal Reserve, CEPR, World Bank
+    - You want a reliable, high-coverage general search with citation counts
+    - You want open-access PDF links when available
+
+    COVERAGE: 250M+ works across all disciplines. Strong economics coverage
+    including NBER (36K+ works), IZA, and Federal Reserve series - a robust
+    replacement for RePEc/IDEAS discovery without IP throttling.
+
+    AUTHENTICATION: OpenAlex requires a FREE API key (since 2026-02-13). Keys
+    do not expire; each has a daily budget that refills at midnight UTC. Set
+    OPENALEX_API_KEY (create a key at https://openalex.org/settings/api).
+    Without a key, requests are heavily rate-limited and may return [].
+
+    Args:
+        query: Search terms (any topic, any field).
+        year: Optional year filter: '2023', '2020-2023', '2020-', '-2019'.
+        max_results: Number of results (default: 10).
+
+    Returns:
+        List of paper dicts with: paper_id, title, authors, abstract,
+        published_date, doi, citations, url, pdf_url (if available).
+
+    Example:
+        search_openalex("returns to english medium instruction", year="2015-", max_results=5)
+    """
+    kwargs = {'year': year} if year else {}
+    return await _search('openalex', query, max_results, **kwargs)
 
 # ============================================================
 # Sci-Hub 工具（仅下载，不搜索）
